@@ -35,6 +35,13 @@
             >
               💰 定投回测
             </button>
+            <button 
+              class="mode-btn" 
+              :class="{ active: viewMode === 'realtime' }"
+              @click="viewMode = 'realtime'"
+            >
+              📊 实时估值
+            </button>
           </div>
         </div>
       </div>
@@ -83,8 +90,8 @@
 
       <!-- 其他模式 -->
       <div v-else class="main-layout">
-        <!-- 左侧：自选列表 (非筛选模式显示) -->
-        <aside class="sidebar-left" v-if="viewMode !== 'screening'">
+        <!-- 左侧：自选列表 (筛选和实时估值模式不显示) -->
+        <aside class="sidebar-left" v-if="viewMode !== 'screening' && viewMode !== 'realtime'">
           <FundWatchlist 
             @view-fund="handleFundSelected" 
             @add-to-compare="handleAddToCompare"
@@ -96,7 +103,7 @@
         </aside>
         
         <!-- 右侧：根据模式显示不同内容 -->
-        <div class="content-area" :class="{ 'full-width': viewMode === 'screening' }">
+        <div class="content-area" :class="{ 'full-width': viewMode === 'screening' || viewMode === 'realtime' }">
           <!-- 筛选模式 -->
           <template v-if="viewMode === 'screening'">
             <FundScreening 
@@ -110,6 +117,11 @@
             <FundBacktest 
               :fundCode="selectedFundCode"
             />
+          </template>
+
+          <!-- 实时估值模式 -->
+          <template v-else-if="viewMode === 'realtime'">
+            <FundRealtime />
           </template>
         </div>
       </div>
@@ -129,6 +141,7 @@ import FundWatchlist from './components/FundWatchlist.vue'
 import FundComparison from './components/FundComparison.vue'
 import FundScreening from './components/FundScreening.vue'
 import FundBacktest from './components/FundBacktest.vue'
+import FundRealtime from './components/FundRealtime.vue'
 import MarketOverview from './components/MarketOverview.vue'
 import FlashNews from './components/FlashNews.vue'
 import SectorRank from './components/SectorRank.vue'
@@ -142,6 +155,7 @@ export default {
     FundComparison,
     FundScreening,
     FundBacktest,
+    FundRealtime,
     MarketOverview,
     FlashNews,
     SectorRank
