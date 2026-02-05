@@ -1,5 +1,30 @@
 <template>
   <div class="watchlist-container">
+    <!-- 对比模式切换按钮 -->
+    <div v-if="showCompareToggle" class="compare-toggle-bar">
+      <button 
+        class="btn-compare-toggle" 
+        :class="{ active: compareMode }"
+        @click="$emit('toggle-compare')"
+      >
+        <span class="toggle-icon">📈</span>
+        <span>{{ compareMode ? '退出对比' : '基金对比' }}</span>
+        <span v-if="compareFunds.length && compareMode" class="compare-count">{{ compareFunds.length }}</span>
+      </button>
+      <!-- 对比模式下显示已选基金 -->
+      <div v-if="compareMode && compareFunds.length > 0" class="compare-selected">
+        <div v-for="fund in compareFunds" :key="fund.code" class="compare-tag">
+          <span class="tag-name">{{ fund.name }}</span>
+        </div>
+      </div>
+      <div v-if="compareMode && compareFunds.length === 0" class="compare-hint">
+        👆 点击下方基金的 <strong>+</strong> 按钮添加对比
+      </div>
+      <div v-if="compareMode && compareFunds.length === 1" class="compare-hint">
+        还需选择至少 <strong>1</strong> 只基金才能对比
+      </div>
+    </div>
+    
     <!-- 头部操作栏 -->
     <div class="watchlist-header">
       <h2>
@@ -166,9 +191,10 @@ export default {
   components: { FundListItems },
   props: {
     compareMode: { type: Boolean, default: false },
-    compareFunds: { type: Array, default: () => [] }
+    compareFunds: { type: Array, default: () => [] },
+    showCompareToggle: { type: Boolean, default: false }
   },
-  emits: ['view-fund', 'add-to-compare'],
+  emits: ['view-fund', 'add-to-compare', 'toggle-compare'],
   setup(props, { emit }) {
     const watchlist = ref([])
     const groups = ref([])
@@ -583,6 +609,81 @@ export default {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+/* 对比切换按钮区域 */
+.compare-toggle-bar {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.btn-compare-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.btn-compare-toggle:hover {
+  border-color: #1677ff;
+  color: #1677ff;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.btn-compare-toggle.active {
+  border-color: #1677ff;
+  background: linear-gradient(135deg, #1677ff 0%, #0958d9 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.3);
+}
+
+.toggle-icon {
+  font-size: 18px;
+}
+
+.compare-count {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.compare-selected {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.compare-tag {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 15px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.compare-hint {
+  margin-top: 10px;
+  text-align: center;
+  color: #64748b;
+  font-size: 13px;
+  padding: 8px;
+  background: #f8fafc;
+  border-radius: 8px;
 }
 
 /* 头部 */

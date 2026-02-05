@@ -1,28 +1,20 @@
 <template>
-  <div class="fund-search">
+  <div class="fund-search" :class="{ 'compact-mode': compact }">
     <div class="search-header">
       <div class="search-box">
         <input
           v-model="searchKeyword"
           @input="handleSearch"
           @keyup.enter="performSearch"
-          placeholder="输入基金代码或名称搜索..."
+          :placeholder="compact ? '输入基金代码或名称搜索...' : '输入基金代码或名称搜索...'"
           class="search-input"
         />
         <button @click="performSearch" class="search-btn">搜索</button>
-      </div>
-      <div class="db-status">
-        <span v-if="dbStatus.has_cache" class="status-text">
-          📊 {{ dbStatus.count }} 只基金 | 更新: {{ formatDate(dbStatus.last_update) }}
-        </span>
-        <span v-else class="status-text status-empty">
-          ⚠️ 暂无数据
-        </span>
         <button 
           @click="updateDatabase" 
           :disabled="updating"
-          class="update-btn"
-          :title="updating ? '更新中...' : '更新基金数据库'"
+          class="refresh-btn"
+          :title="dbStatus.has_cache ? `${dbStatus.count}只基金 | 更新: ${formatDate(dbStatus.last_update)}` : '更新基金数据库'"
         >
           <span v-if="updating" class="spinner"></span>
           <span v-else>🔄</span>
@@ -52,6 +44,12 @@ import { fundAPI } from '../services/api'
 
 export default {
   name: 'FundSearch',
+  props: {
+    compact: {
+      type: Boolean,
+      default: false
+    }
+  },
   emits: ['fund-selected'],
   data() {
     return {
@@ -151,6 +149,36 @@ export default {
   border-radius: 12px;
   padding: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+.fund-search.compact-mode {
+  margin-bottom: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+.fund-search.compact-mode .search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  margin-top: 4px;
+}
+
+.fund-search.compact-mode .loading {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  margin-top: 4px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
 .search-header {
@@ -162,9 +190,10 @@ export default {
 
 .search-box {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex: 1;
-  min-width: 280px;
+  min-width: 200px;
+  align-items: center;
 }
 
 .search-input {
@@ -174,6 +203,7 @@ export default {
   border-radius: 8px;
   font-size: 14px;
   transition: all 0.2s;
+  min-width: 150px;
 }
 
 .search-input:focus {
@@ -184,7 +214,7 @@ export default {
 
 .search-btn {
   padding: 10px 20px;
-  background: linear-gradient(135deg, #1677ff 0%, #0958d9 100%);
+  background: linear-gradient(135deg, #ff9f43 0%, #f39c12 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -196,51 +226,30 @@ export default {
 
 .search-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4);
 }
 
-.db-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: #6b7280;
-  background: #f9fafb;
-  padding: 6px 12px;
-  border-radius: 20px;
-  border: 1px solid #e5e7eb;
-}
-
-.status-text {
-  white-space: nowrap;
-}
-
-.status-empty {
-  color: #ef4444;
-}
-
-.update-btn {
-  width: 28px;
-  height: 28px;
+.refresh-btn {
+  width: 38px;
+  height: 38px;
   border: none;
-  background: white;
-  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 16px;
   transition: all 0.3s;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  flex-shrink: 0;
 }
 
-.update-btn:hover:not(:disabled) {
-  background: #1677ff;
-  color: white;
+.refresh-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.25);
   transform: rotate(180deg);
 }
 
-.update-btn:disabled {
+.refresh-btn:disabled {
   cursor: not-allowed;
   opacity: 0.7;
 }
