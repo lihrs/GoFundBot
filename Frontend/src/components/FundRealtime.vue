@@ -148,8 +148,12 @@
             <span class="holding-value">{{ holdings[fund.code].cost.toFixed(4) }}</span>
           </div>
           <div class="holding-row">
-            <span class="holding-label">持有金额(估)</span>
+            <span class="holding-label">持有金额</span>
             <span class="holding-value">¥{{ getHoldingAmount(fund).toFixed(2) }}</span>
+          </div>
+          <div class="holding-row">
+            <span class="holding-label">估算金额</span>
+            <span class="holding-value">¥{{ getHoldingEstimatedAmount(fund).toFixed(2) }}</span>
           </div>
           <div class="holding-row">
             <span class="holding-label">今日收益(估)</span>
@@ -188,32 +192,98 @@
     <!-- 持仓设置弹窗 -->
     <div v-if="holdingModal.open" class="modal-overlay" @click.self="closeHoldingModal">
       <div class="modal-box">
-        <h3>设置持仓</h3>
+        <div class="modal-tabs">
+          <button class="modal-tab" :class="{ active: modalTab === 'set' }" @click="modalTab = 'set'">设置持仓</button>
+          <button class="modal-tab" :class="{ active: modalTab === 'trade' }" @click="modalTab = 'trade'">加减仓</button>
+        </div>
         <div class="fund-modal-info">
           <span class="fund-name">{{ holdingModal.fund?.name }}</span>
           <span class="fund-code">#{{ holdingModal.fund?.code }}</span>
           <div class="fund-nav-info">
             <span>上一交易日净值：</span>
             <span class="nav-value">{{ holdingModal.fund?.dwjz || '-' }}</span>
+            <span class="nav-date" v-if="holdingModal.fund?.jzrq">（{{ holdingModal.fund.jzrq }}）</span>
+          </div>
+          <div class="fund-holding-summary" v-if="holdingModal.fund && holdings[holdingModal.fund.code]">
+            <span>当前份额：{{ holdings[holdingModal.fund.code].share.toFixed(2) }} 份</span>
+            <span class="summary-sep">|</span>
+            <span>成本价：{{ holdings[holdingModal.fund.code].cost.toFixed(4) }}</span>
           </div>
         </div>
-        <div class="form-group">
-          <label>持有金额 (元)</label>
-          <input 
-            v-model.number="holdingForm.amount" 
-            type="number" 
-            step="any"
-            placeholder="请输入持有金额"
-            class="modal-input"
-          />
-          <div class="form-hint" v-if="holdingForm.amount && holdingModal.fund?.dwjz">
-            折算份额：{{ calculateShare(holdingForm.amount, holdingModal.fund.dwjz).toFixed(2) }} 份
+
+        <!-- 设置持仓 Tab -->
+        <div v-if="modalTab === 'set'">
+          <div class="form-group">
+            <label>持有金额 (元)</label>
+            <input 
+              v-model.number="holdingForm.amount" 
+              type="number" 
+              step="any"
+              placeholder="请输入持有金额"
+              class="modal-input"
+            />
+            <div class="form-hint" v-if="holdingForm.amount && holdingModal.fund?.dwjz">
+              折算份额：{{ calculateShare(holdingForm.amount, holdingModal.fund.dwjz).toFixed(2) }} 份
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-secondary" @click="closeHoldingModal">取消</button>
+            <button class="btn btn-danger" @click="clearHolding" v-if="holdingModal.fund && holdings[holdingModal.fund.code]">清空</button>
+            <button class="btn btn-primary" @click="saveHolding" :disabled="!holdingForm.amount">保存</button>
           </div>
         </div>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="closeHoldingModal">取消</button>
-          <button class="btn btn-danger" @click="clearHolding" v-if="holdingModal.fund && holdings[holdingModal.fund.code]">清空</button>
-          <button class="btn btn-primary" @click="saveHolding" :disabled="!holdingForm.amount">保存</button>
+
+        <!-- 加减仓 Tab -->
+        <div v-if="modalTab === 'trade'">
+          <div class="trade-type-toggle">
+            <button class="trade-type-btn buy" :class="{ active: tradeForm.type === 'buy' }" @click="tradeForm.type = 'buy'">加仓</button>
+            <button class="trade-type-btn sell" :class="{ active: tradeForm.type === 'sell' }" @click="tradeForm.type = 'sell'">减仓</button>
+          </div>
+          <div class="form-group">
+            <label>交易净值</label>
+            <input 
+              v-model.number="tradeForm.nav" 
+              type="number" 
+              step="any"
+              placeholder="默认使用上一交易日净值"
+              class="modal-input"
+            />
+            <div class="form-hint">
+              输入交易确认日的单位净值，留空则使用上一交易日净值 {{ holdingModal.fund?.dwjz || '' }}
+            </div>
+          </div>
+          <div class="form-group">
+            <label>{{ tradeForm.type === 'buy' ? '加仓' : '减仓' }}金额 (元)</label>
+            <input 
+              v-model.number="tradeForm.amount" 
+              type="number" 
+              step="any"
+              :placeholder="'请输入' + (tradeForm.type === 'buy' ? '加仓' : '减仓') + '金额'"
+              class="modal-input"
+            />
+            <div class="form-hint" v-if="tradeForm.amount && getTradeNav() > 0">
+              <template v-if="tradeForm.type === 'buy'">
+                买入份额：{{ (tradeForm.amount / getTradeNav()).toFixed(2) }} 份，
+                交易后总份额：{{ getTradeResultShares().toFixed(2) }} 份
+              </template>
+              <template v-else>
+                卖出份额：{{ (tradeForm.amount / getTradeNav()).toFixed(2) }} 份，
+                交易后总份额：{{ getTradeResultShares().toFixed(2) }} 份
+                <span v-if="getTradeResultShares() < 0" class="form-error">⚠️ 份额不足</span>
+              </template>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-secondary" @click="closeHoldingModal">取消</button>
+            <button 
+              class="btn" 
+              :class="tradeForm.type === 'buy' ? 'btn-primary' : 'btn-danger'" 
+              @click="saveTrade" 
+              :disabled="!tradeForm.amount || tradeForm.amount <= 0 || getTradeResultShares() < 0"
+            >
+              确认{{ tradeForm.type === 'buy' ? '加仓' : '减仓' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -247,6 +317,8 @@ export default {
     // 持仓弹窗
     const holdingModal = ref({ open: false, fund: null })
     const holdingForm = ref({ amount: '' })
+    const modalTab = ref('set')
+    const tradeForm = ref({ type: 'buy', amount: '', nav: '' })
 
     // ==================== 计算属性 ====================
     const isTradingTime = computed(() => {
@@ -279,7 +351,7 @@ export default {
       funds.value.forEach(fund => {
         const h = holdings.value[fund.code]
         if (h && h.share) {
-          total += getHoldingAmount(fund)
+          total += getHoldingEstimatedAmount(fund)
         }
       })
       return total
@@ -328,19 +400,29 @@ export default {
       return (num >= 0 ? '+' : '') + num.toFixed(2) + '%'
     }
 
+    // 持有金额 = 上一交易日净值 × 份额（实际金额）
     const getHoldingAmount = (fund) => {
+      const h = holdings.value[fund.code]
+      if (!h || !h.share) return 0
+      const nav = parseFloat(fund.dwjz) || 0
+      return h.share * nav
+    }
+
+    // 估算金额 = 估算净值 × 份额
+    const getHoldingEstimatedAmount = (fund) => {
       const h = holdings.value[fund.code]
       if (!h || !h.share) return 0
       const nav = parseFloat(fund.gsz) || parseFloat(fund.dwjz) || 0
       return h.share * nav
     }
 
+    // 今日收益 = 份额 × (估算净值 - 上一交易日净值)
     const getHoldingProfitToday = (fund) => {
       const h = holdings.value[fund.code]
       if (!h || !h.share) return 0
-      const amount = getHoldingAmount(fund)
-      const rate = typeof fund.gszzl === 'number' ? fund.gszzl : parseFloat(fund.gszzl) || 0
-      return amount - (amount / (1 + rate / 100))
+      const gsz = parseFloat(fund.gsz) || parseFloat(fund.dwjz) || 0
+      const dwjz = parseFloat(fund.dwjz) || 0
+      return h.share * (gsz - dwjz)
     }
 
     const getHoldingProfitTotal = (fund) => {
@@ -675,6 +757,9 @@ export default {
       } else {
         holdingForm.value = { amount: '' }
       }
+      // 重置加减仓表单
+      modalTab.value = h && h.share ? 'trade' : 'set'
+      tradeForm.value = { type: 'buy', amount: '', nav: '' }
     }
 
     const closeHoldingModal = () => {
@@ -712,6 +797,64 @@ export default {
       
       const newHoldings = { ...holdings.value }
       delete newHoldings[fund.code]
+      holdings.value = newHoldings
+      localStorage.setItem('realtime_holdings', JSON.stringify(newHoldings))
+      closeHoldingModal()
+    }
+
+    // 获取交易净值（优先使用用户输入，否则使用上一交易日净值）
+    const getTradeNav = () => {
+      const inputNav = parseFloat(tradeForm.value.nav)
+      if (inputNav > 0) return inputNav
+      return parseFloat(holdingModal.value.fund?.dwjz) || 0
+    }
+
+    // 计算交易后总份额
+    const getTradeResultShares = () => {
+      const nav = getTradeNav()
+      const amount = parseFloat(tradeForm.value.amount) || 0
+      if (nav <= 0 || amount <= 0) return holdings.value[holdingModal.value.fund?.code]?.share || 0
+      const tradeShares = amount / nav
+      const currentShares = holdings.value[holdingModal.value.fund?.code]?.share || 0
+      return tradeForm.value.type === 'buy' ? currentShares + tradeShares : currentShares - tradeShares
+    }
+
+    // 保存加减仓交易
+    const saveTrade = () => {
+      const fund = holdingModal.value.fund
+      if (!fund) return
+
+      const amount = parseFloat(tradeForm.value.amount)
+      const nav = getTradeNav()
+      if (!amount || amount <= 0 || nav <= 0) return
+
+      const tradeShares = amount / nav
+      const h = holdings.value[fund.code] || { share: 0, cost: 0 }
+      const newHoldings = { ...holdings.value }
+
+      if (tradeForm.value.type === 'buy') {
+        // 加仓：计算新的总份额和加权平均成本
+        const newTotalShares = h.share + tradeShares
+        const newAvgCost = h.share > 0
+          ? (h.share * h.cost + amount) / newTotalShares
+          : nav
+        newHoldings[fund.code] = {
+          share: newTotalShares,
+          cost: newAvgCost
+        }
+      } else {
+        // 减仓：份额减少，成本价不变
+        const newTotalShares = h.share - tradeShares
+        if (newTotalShares <= 0.01) {
+          delete newHoldings[fund.code]
+        } else {
+          newHoldings[fund.code] = {
+            share: newTotalShares,
+            cost: h.cost
+          }
+        }
+      }
+
       holdings.value = newHoldings
       localStorage.setItem('realtime_holdings', JSON.stringify(newHoldings))
       closeHoldingModal()
@@ -788,6 +931,8 @@ export default {
       dropdownRef,
       holdingModal,
       holdingForm,
+      modalTab,
+      tradeForm,
       isTradingTime,
       sortedFunds,
       hasHoldings,
@@ -800,6 +945,7 @@ export default {
       formatGsz,
       formatChange,
       getHoldingAmount,
+      getHoldingEstimatedAmount,
       getHoldingProfitToday,
       getHoldingProfitTotal,
       getHoldingProfitTodayClass,
@@ -816,7 +962,10 @@ export default {
       saveHolding,
       clearHolding,
       saveRefreshMs,
-      calculateShare
+      calculateShare,
+      getTradeNav,
+      getTradeResultShares,
+      saveTrade
     }
   }
 }
@@ -1373,6 +1522,99 @@ export default {
 .modal-box h3 {
   margin: 0 0 16px 0;
   font-size: 1.1rem;
+}
+
+/* 弹窗 Tab */
+.modal-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.modal-tab {
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+}
+
+.modal-tab.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+.modal-tab:hover:not(.active) {
+  color: var(--text-primary);
+}
+
+/* 持仓摘要 */
+.fund-holding-summary {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-color);
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.summary-sep {
+  color: var(--border-color);
+}
+
+.nav-date {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* 加减仓切换 */
+.trade-type-toggle {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.trade-type-btn {
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  background: var(--bg-primary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-secondary);
+}
+
+.trade-type-btn.buy.active {
+  background: rgba(22, 119, 255, 0.1);
+  color: var(--primary-color);
+}
+
+.trade-type-btn.sell.active {
+  background: rgba(255, 77, 79, 0.1);
+  color: var(--danger-color);
+}
+
+.trade-type-btn:hover:not(.active) {
+  background: var(--bg-card);
+}
+
+.form-error {
+  color: var(--danger-color);
+  font-weight: 600;
 }
 
 .fund-modal-info {

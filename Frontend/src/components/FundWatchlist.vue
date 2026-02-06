@@ -547,8 +547,8 @@ export default {
       }
     }
 
-    onMounted(() => {
-      loadWatchlist()
+    onMounted(async () => {
+      await loadWatchlist()
       // 启动估值自动刷新
       startEstimateRefreshTimer()
     })
