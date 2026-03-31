@@ -42,6 +42,13 @@
             >
               📊 实时估值
             </button>
+            <button 
+              class="mode-btn" 
+              :class="{ active: viewMode === 'positions' }"
+              @click="viewMode = 'positions'"
+            >
+              💼 我的持仓
+            </button>
           </div>
         </div>
       </div>
@@ -119,9 +126,20 @@
             />
           </template>
 
-          <!-- 实时估值模式 -->
-          <template v-else-if="viewMode === 'realtime'">
-            <FundRealtime />
+          <!-- 我的持仓模式 -->
+          <template v-else-if="viewMode === 'positions'">
+            <MyPositions />
+          </template>
+
+          <!-- 详情模式 -->
+          <template v-else>
+            <FundSearch @fund-selected="handleFundSelected" />
+            <FundDetail v-if="selectedFundCode" :fundCode="selectedFundCode" />
+            <div v-else class="welcome-container">
+              <div class="welcome-icon">🔍</div>
+              <h3>搜索基金开始分析</h3>
+              <p>在上方搜索框输入基金代码或名称</p>
+            </div>
           </template>
         </div>
       </div>
@@ -145,6 +163,7 @@ import FundRealtime from './components/FundRealtime.vue'
 import MarketOverview from './components/MarketOverview.vue'
 import FlashNews from './components/FlashNews.vue'
 import SectorRank from './components/SectorRank.vue'
+import MyPositions from './components/MyPositions.vue'
 
 export default {
   name: 'App',
@@ -158,7 +177,8 @@ export default {
     FundRealtime,
     MarketOverview,
     FlashNews,
-    SectorRank
+    SectorRank,
+    MyPositions
   },
   setup() {
     const selectedFundCode = ref('')
