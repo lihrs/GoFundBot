@@ -1,24 +1,30 @@
 <template>
-  <div class="fund-comparison" v-if="selectedFunds.length > 0 || compareFunds.length > 0">
+  <div class="fund-comparison" :class="{ 'compact-mode': compact }">
     <div class="comparison-header">
       <h2>
         <span class="header-icon">📈</span>
         基金对比
         <span class="count-badge" v-if="selectedFunds.length">{{ selectedFunds.length }}/{{ maxFunds }}</span>
       </h2>
-      <div class="header-actions">
+      <div class="header-actions" v-if="selectedFunds.length > 0">
         <button 
           class="btn btn-clear" 
           @click="clearSelection" 
           :disabled="selectedFunds.length === 0"
         >
-          清空对比
+          清空
         </button>
       </div>
     </div>
 
+    <!-- 空状态提示 -->
+    <div v-if="selectedFunds.length === 0" class="empty-compare-hint">
+      <span class="hint-icon">👆</span>
+      <span>点击自选基金的 <strong>+</strong> 按钮添加对比</span>
+    </div>
+
     <!-- 基金选择区域 -->
-    <div class="selection-area">
+    <div class="selection-area" v-if="selectedFunds.length > 0">
       <div class="selection-tags">
         <div 
           v-for="fund in selectedFunds" 
@@ -31,14 +37,14 @@
           <span class="tag-code">({{ fund.code }})</span>
           <button class="tag-remove" @click="removeFund(fund.code)">×</button>
         </div>
-        <div v-if="selectedFunds.length < maxFunds && selectedFunds.length > 0" class="add-fund-hint">
-          <span>👈 继续从左侧添加基金 (还可添加{{ maxFunds - selectedFunds.length }}只)</span>
+        <div v-if="selectedFunds.length < maxFunds" class="add-fund-hint">
+          <span>还可添加{{ maxFunds - selectedFunds.length }}只</span>
         </div>
       </div>
     </div>
 
-    <!-- 对比内容区域 -->
-    <div class="comparison-content" v-if="selectedFunds.length >= 2">
+    <!-- 对比内容区域（紧凑模式下隐藏详细内容） -->
+    <div class="comparison-content" v-if="selectedFunds.length >= 2 && !compact">
       <!-- 净值走势图表 -->
       <div class="chart-section">
         <div class="section-header">
@@ -266,6 +272,10 @@ export default {
     compareFunds: {
       type: Array,
       default: () => []
+    },
+    compact: {
+      type: Boolean,
+      default: false
     }
   },
   emits: ['remove-fund', 'clear-funds'],
@@ -698,6 +708,60 @@ export default {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   margin-bottom: 20px;
   overflow: hidden;
+}
+
+/* 紧凑模式样式 */
+.fund-comparison.compact-mode {
+  margin-bottom: 0;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.fund-comparison.compact-mode .comparison-header {
+  padding: 10px 12px;
+}
+
+.fund-comparison.compact-mode .comparison-header h2 {
+  font-size: 14px;
+}
+
+.fund-comparison.compact-mode .selection-area {
+  padding: 8px 12px;
+}
+
+.fund-comparison.compact-mode .fund-tag {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.fund-comparison.compact-mode .tag-code {
+  display: none;
+}
+
+.fund-comparison.compact-mode .add-fund-hint {
+  font-size: 11px;
+}
+
+/* 空状态提示 */
+.empty-compare-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 13px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.empty-compare-hint .hint-icon {
+  font-size: 16px;
+}
+
+.fund-comparison.compact-mode .empty-compare-hint {
+  padding: 10px 12px;
+  font-size: 12px;
 }
 
 .comparison-header {
