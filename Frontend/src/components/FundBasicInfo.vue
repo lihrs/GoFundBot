@@ -188,12 +188,18 @@ export default {
           // 移除自选
           await watchlistAPI.removeFromWatchlist(this.fundCode)
           this.isInWatchlist = false
+          window.dispatchEvent(new CustomEvent('watchlist-updated', {
+            detail: { fundCode: this.fundCode, action: 'remove' }
+          }))
         } else {
           // 添加自选
           const fundName = this.fundInfo?.name || this.fundInfo?.fund_name || this.fundCode
           const fundType = this.fundInfo?.fund_type || ''
           await watchlistAPI.addToWatchlist(this.fundCode, fundName, fundType)
           this.isInWatchlist = true
+          window.dispatchEvent(new CustomEvent('watchlist-updated', {
+            detail: { fundCode: this.fundCode, action: 'add' }
+          }))
         }
       } catch (error) {
         console.error('操作自选失败:', error)

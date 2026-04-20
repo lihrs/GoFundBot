@@ -38,16 +38,9 @@
             <button 
               class="mode-btn" 
               :class="{ active: viewMode === 'realtime' }"
-              @click="viewMode = 'realtime'"
+              @click="viewMode = 'portfolio'"
             >
-              📊 实时估值
-            </button>
-            <button 
-              class="mode-btn" 
-              :class="{ active: viewMode === 'positions' }"
-              @click="viewMode = 'positions'"
-            >
-              💼 我的持仓
+              📊 估值与持仓
             </button>
           </div>
         </div>
@@ -97,8 +90,8 @@
 
       <!-- 其他模式 -->
       <div v-else class="main-layout">
-        <!-- 左侧：自选列表 (筛选和实时估值模式不显示) -->
-        <aside class="sidebar-left" v-if="viewMode !== 'screening' && viewMode !== 'realtime'">
+        <!-- 左侧：自选列表 (筛选和估值持仓看板模式不显示) -->
+        <aside class="sidebar-left" v-if="viewMode !== 'screening' && viewMode !== 'portfolio'">
           <FundWatchlist 
             @view-fund="handleFundSelected" 
             @add-to-compare="handleAddToCompare"
@@ -110,7 +103,7 @@
         </aside>
         
         <!-- 右侧：根据模式显示不同内容 -->
-        <div class="content-area" :class="{ 'full-width': viewMode === 'screening' || viewMode === 'realtime' }">
+        <div class="content-area" :class="{ 'full-width': viewMode === 'screening' || viewMode === 'portfolio' }">
           <!-- 筛选模式 -->
           <template v-if="viewMode === 'screening'">
             <FundScreening 
@@ -118,17 +111,17 @@
               @add-to-compare="handleAddToCompare"
             />
           </template>
+
+          <!-- 估值与持仓一体化看板 -->
+          <template v-else-if="viewMode === 'portfolio'">
+            <FundRealtime @view-detail="handleRealtimeFundView" />
+          </template>
           
           <!-- 回测模式 -->
           <template v-else-if="viewMode === 'backtest'">
             <FundBacktest 
               :fundCode="selectedFundCode"
             />
-          </template>
-
-          <!-- 我的持仓模式 -->
-          <template v-else-if="viewMode === 'positions'">
-            <MyPositions />
           </template>
 
           <!-- 详情模式 -->
@@ -163,7 +156,6 @@ import FundRealtime from './components/FundRealtime.vue'
 import MarketOverview from './components/MarketOverview.vue'
 import FlashNews from './components/FlashNews.vue'
 import SectorRank from './components/SectorRank.vue'
-import MyPositions from './components/MyPositions.vue'
 
 export default {
   name: 'App',
@@ -177,8 +169,7 @@ export default {
     FundRealtime,
     MarketOverview,
     FlashNews,
-    SectorRank,
-    MyPositions
+    SectorRank
   },
   setup() {
     const selectedFundCode = ref('')
@@ -228,6 +219,13 @@ export default {
     const handleScreeningFundView = (fundCode) => {
       selectedFundCode.value = fundCode
       viewMode.value = 'dashboard'
+    }
+
+    // 从估值卡片点击后跳转到基金详情（大盘页布局）
+    const handleRealtimeFundView = (fundOrCode) => {
+      compareMode.value = false
+      viewMode.value = 'dashboard'
+      handleFundSelected(fundOrCode)
     }
     
     // 添加基金到对比列表
@@ -292,6 +290,7 @@ export default {
       handleHeaderSearch,
       handleDashboardFundView,
       handleScreeningFundView,
+      handleRealtimeFundView,
       handleAddToCompare,
       handleRemoveFromCompare,
       handleClearCompare,
